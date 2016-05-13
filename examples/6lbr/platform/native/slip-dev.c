@@ -177,6 +177,8 @@ serial_input(FILE * inslip)
   static int inbufptr = 0;
   int ret;
   unsigned char c;
+  FILE *fp_rssi;
+  int i;
 
 #ifdef linux
   ret = fread(&c, 1, 1, inslip);
@@ -220,6 +222,19 @@ after_fread:
       } else if(inbuf[0] == 'E' && is_sensible_string(inbuf, inbufptr) ) {
         LOG6LBR_WRITE(ERROR, GLOBAL, inbuf + 1, inbufptr - 1);
         LOG6LBR_APPEND(ERROR, GLOBAL, "\n");
+      } else if(inbuf[0] == 'L' && strncmp((const char*)inbuf, "LRSSI", 5) == 0) {
+        LOG6LBR_WRITE(INFO, SLIP_DBG, inbuf, inbufptr);
+	for (i=5; i<inbufptr; i++){
+	  if(inbuf[i] == '#'){
+	    inbuf[i] = '\0';
+	    /* write last rssi to file */
+	    fp_rssi = fopen("/memtmp/lastRSSI", "w");
+            if(fp_rssi != NULL) {
+              fputs((const char*)&inbuf[5], fp_rssi);
+              fclose(fp_rssi);
+            }
+	  }
+	}
       } else if(is_sensible_string(inbuf, inbufptr)) {
         LOG6LBR_WRITE(INFO, SLIP_DBG, inbuf, inbufptr);
       } else {
